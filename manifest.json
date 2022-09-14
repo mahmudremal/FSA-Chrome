@@ -1,0 +1,37 @@
+{
+  "update_url": "https://api.futurewordpress.com/fiverr/updates.json",
+  "manifest_version": 3,
+  "name": "FSA - Chrome",
+  "description": "Fiverr Seller Assistant tool for Seller helps allow you to see buyer request details, buyer information, Filtering and much more",
+  "version": "0.1",
+  "icons": { 
+    "16": "assets/logo-16.png",
+    "48": "assets/logo-48.png",
+   "128": "assets/logo-128.png" 
+  },
+  "content_scripts": [
+    {
+      "matches": [ "*://*.fiverr.com/users/*" ],
+      "js": [ "assets/build/library/js/jquery.min.js", "assets/build/js/users.js" ],
+      "css": [ "assets/build/css/users.css" ]
+    },
+    {
+      "matches": [ "https://fiverr.com/users/*" ],
+      "js": [ "assets/build/library/js/jquery.min.js", "assets/build/js/users.js" ],
+      "css": [ "assets/build/css/users.css" ]
+    }
+  ],
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.fiverr.com/*",
+    "https://fiverr.com/*",
+    "https://cdn0.forter.com/*",
+    "https://api.futurewordpress.com/*",
+    "https://github.com/*",
+    "https://*/*"
+  ]
+}
