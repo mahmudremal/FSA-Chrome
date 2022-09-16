@@ -5,6 +5,7 @@
         currency: this.is( document.querySelector( '.locale-settings-package .currency-selection-trigger' ) ) ? this.currency( document.querySelector( '.locale-settings-package .currency-selection-trigger' ).innerText ) : '$'
       }
       this.base = {};this.database = this.getDatabase();
+      this.isCDN = false;this.isDef = false;
       this.init();
 		}
     init() {
@@ -51,7 +52,7 @@
     trigger() {
       const thisClass = this;
       document.querySelector( '.js-db-table' ).classList.add( 'fwp-js-activate' );
-      var link = document.createElement( 'link' );link.href = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css';link.rel = 'stylesheet';document.head.appendChild( link );
+      if( thisClass.isCDN ) {var link = document.createElement( 'link' );link.href = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css';link.rel = 'stylesheet';document.head.appendChild( link );}
       setInterval( () => {
         thisClass.load();
       }, 5000 );
@@ -84,7 +85,7 @@
               } );
             }
   
-            if( thisClass.frame( meta, e ) ) {} else {}
+            if( ! thisClass.isDef ) {thisClass.fetch( meta, e );} else {thisClass.frame( meta, e );}
   
           } else {
             // Button not found.
@@ -101,7 +102,28 @@
         }
       } );
     }
-    frame( meta, e ) {
+    fetch( meta, e ) {
+      const thisClass = this;var data;
+      if( ! meta.requestId ) {return;}
+      e.setAttribute( 'data-fwpid', meta.requestId );
+      meta.trHtml = e.innerHTML;
+      $.ajax( {
+        url: "https://www.fiverr.com/inbox/contacts/" + meta.username + "/info",
+        dataType: 'json',
+        success: function( result ) {
+          data = result;
+          result = thisClass.fetchScrap( meta, result, e );
+          thisClass.execute( result, e );
+          thisClass.updateFilters( 'all' );
+        },
+        error: function( err ) {
+          console.log( 'Some error detected', err );
+          if( ! thisClass.is( e.getAttribute( 'data-tried' ) ) ) {e.setAttribute( 'data-tried', 1 );}
+          if( Number( e.getAttribute( 'data-tried' ) ) <= 3 ) {e.removeAttribute( 'data-fwpid' );e.setAttribute( 'data-tried', ( Number( e.getAttribute( 'data-tried' ) ) + 1 ) );}
+        }
+      } );
+    }
+    frame( meta, data, e ) {
       const thisClass = this;
       if( ! meta.requestId ) {return;}
       e.setAttribute( 'data-fwpid', meta.requestId );
@@ -119,13 +141,11 @@
           thisClass.base[ meta.requestId ] = result;
           thisClass.execute( result, e );
           thisClass.updateFilters( 'all' );
-          return true;
         },
         error: function( err ) {
           console.log( 'Some error detected', err );
           if( ! thisClass.is( e.getAttribute( 'data-tried' ) ) ) {e.setAttribute( 'data-tried', 1 );}
           if( Number( e.getAttribute( 'data-tried' ) ) <= 3 ) {e.removeAttribute( 'data-fwpid' );e.setAttribute( 'data-tried', ( Number( e.getAttribute( 'data-tried' ) ) + 1 ) );}
-          return false;
         }
       } );
     }
@@ -137,16 +157,18 @@
           node = document.createElement( 'div' );node.classList.add( 'fwp-tr-td' );td.appendChild( node );
         } );
       }
+
       // Insert Country Name after DATE.
       if( e.querySelectorAll( 'td.date .fwp-c-location' ).length <= 0 ) {
-        i = document.createElement( 'i' );i.classList.add( 'fwp-c-location', 'fi', 'fi-' + thisClass.flags( args.info.location ) );e.querySelector( 'td.date .fwp-tr-td' ).appendChild( i );
+        if( thisClass.isCDN ) {i = document.createElement( 'i' );i.classList.add( 'fwp-c-location', 'fi', 'fi-' + thisClass.flags( args.info.location ) );e.querySelector( 'td.date .fwp-tr-td' ).appendChild( i );} else {i = document.createElement( 'img' );i.classList.add( 'fwp-c-location' );i.src = thisClass.flags( args.info.location );e.querySelector( 'td.date .fwp-tr-td' ).appendChild( i );}
+
         node = document.createElement( 'span' );node.classList.add( 'fwp-c-location' );node.innerText = ( args.info.location ) ? args.info.location : 'N/A';
         e.querySelector( 'td.date .fwp-tr-td' ).appendChild( node );
       }
       
       // Insert Buyer Account date after USER Image.
       if( e.querySelectorAll( 'td.profile-40 .fwp-c-date' ).length <= 0 ) {
-        node = document.createElement( 'span' );node.classList.add( 'fwp-c-name' );node.innerText = args.meta.username;e.querySelector( 'td.profile-40' ).appendChild( node );
+        node = document.createElement( 'a' );node.classList.add( 'fwp-c-name' );node.href = 'https://www.fiverr.com/' + args.meta.username;node.target = '_blank';node.innerText = args.meta.username;e.querySelector( 'td.profile-40' ).appendChild( node );
         node = document.createElement( 'span' );node.classList.add( 'fwp-c-date' );node.innerText = thisClass.is( args.info.since ) ? args.info.since : 'N/A';
         e.querySelector( 'td.profile-40 .fwp-tr-td' ).appendChild( thisClass.icons( 'profile' ) );e.querySelector( 'td.profile-40 .fwp-tr-td' ).appendChild( node );
       }
@@ -160,15 +182,14 @@
         span = document.createElement( 'span' );span.innerText = 'Reviews as Buyer';div1.appendChild( span );
         span = document.createElement( 'span' );span.innerText = 'Reviews as Seller';div2.appendChild( span );
 
-        span = document.createElement( 'span' );span.innerText = thisClass.is( args.rating.rab ) ? args.rating.rab + ( thisClass.is( args.rating.rabt ) ? args.rating.rabt : '' ) : 'None';div1.appendChild( span );
-        span = document.createElement( 'span' );span.innerText = thisClass.is( args.rating.ras ) ? args.rating.ras + ( thisClass.is( args.rating.rast ) ? args.rating.rast : '' ) : 'None';div2.appendChild( span );
+        span = document.createElement( 'span' );span.innerText = thisClass.is( args.rating.rab ) ? parseFloat( args.rating.rab ).toFixed( 1 ) + '' + ( thisClass.is( args.rating.rabt ) ? ( ! isNaN( args.rating.rabt ) ? '(' + args.rating.rabt + ')' : args.rating.rabt ) : '' ) : 'None';div1.appendChild( span );
+        span = document.createElement( 'span' );span.innerText = thisClass.is( args.rating.ras ) ? parseFloat( args.rating.ras ).toFixed( 1 ) + '' + ( thisClass.is( args.rating.rast ) ? ( ! isNaN( args.rating.rast ) ? '(' + args.rating.rast + ')' : args.rating.rast ) : '' ) : 'None';div2.appendChild( span );
         
         div.appendChild( div1 );div.appendChild( div2 );
         e.querySelector( 'td.text-wide .fwp-tr-td, td.see-more .fwp-tr-td' ).appendChild( div );
       }
       
       // Insert Buyer Responding time after OFFERS SENT.
-      // Nothing. This field width is not enough
       if( e.querySelectorAll( 'td.applications .fwp-c-link' ).length <= 0 ) {
         node = document.createElement( 'a' );node.classList.add( 'fwp-c-link' );node.href = 'https://www.fiverr.com/' + args.meta.username;node.target = '_blank';
         node.appendChild( thisClass.icons( 'link' ) );e.querySelector( 'td.applications .fwp-tr-td' ).appendChild( node );
@@ -181,7 +202,6 @@
         e.querySelector( 'td.hidden-action:nth-child(5) .fwp-tr-td' ).appendChild( thisClass.icons( status.toLowerCase() ) );e.querySelector( 'td.hidden-action:nth-child(5) .fwp-tr-td' ).appendChild( node );
       }
 
-      
       // Insert Buyer Responding time after Price and Button.
       if( e.querySelectorAll( 'td.hidden-action:nth-child(6) .fwp-c-response' ).length <= 0 && e.querySelector( 'td.hidden-action:nth-child(6)' ) !== null ) {
         node = document.createElement( 'span' );node.classList.add( 'fwp-c-response' );node.innerText = thisClass.is( args.info.response ) ? args.info.response : 'N/A';
@@ -193,6 +213,49 @@
       //   node = document.createElement( 'iframe' );node.classList.add( 'extension-requestpage-iframe' );node.src = 'https://www.fiverr.com/' + args.meta.username;node.setAttribute( 'frameborder', 0 );node.setAttribute( 'allowfullscreen', true );
       //   // e.querySelector( 'td.see-more' ).appendChild( node );
       // }
+    }
+    fetchScrap( meta, result, e ) {
+      const thisClass = this;var data, r = result, lang = [];;
+
+      if( thisClass.is( r.languages ) ) {
+        r.languages.forEach( function( l, i ) {
+          lang.push( [ ( thisClass.is( thisClass.database.langs[ l.language ] ) ? thisClass.database.langs[ l.language ].name : l.language ), l.level ] );
+        } );
+      }
+      data = {
+        info: {
+          user: meta.username,
+          link: 'https://www.fiverr.com/' + meta.username,
+          location: thisClass.is( r.country ) ? r.country : false,
+          locationShort: thisClass.is( r.countryCode ) ? r.countryCode : false,
+          since: thisClass.is( r.memberSince ) ? new Date( r.memberSince * 1000 ).toLocaleDateString( "en-US", { year: 'numeric', month: 'short' } ) : false, // https://stackoverflow.com/questions/3552461/how-do-i-format-a-date-in-javascript
+          response: thisClass.is( r.avgResponseTimeInHours ) ? r.avgResponseTimeInHours + ' ' + ( ( r.avgResponseTimeInHours <= 1 ) ? 'Hour' : 'Hours' ) : false,
+          delivery: thisClass.is( r.lastDelivery ) ? r.lastDelivery : false,
+          online: thisClass.is( ! r.isAway ) ? 'Online' : false
+        },
+        rating: {
+          rating: thisClass.is( r.starsRating ) ? r.starsRating : false,
+          total: thisClass.is( r.ratingsCount ) ? r.ratingsCount : false,
+          html: thisClass.is( r.avgRatingHtml ) ? r.avgRatingHtml : false,
+          scl: thisClass.is( r.sellerCommunicationLevel ) ? r.sellerCommunicationLevel : false,
+          rtf: thisClass.is( r.recommendToaFriend ) ? r.recommendToaFriend : false,
+          sad: thisClass.is( r.sellerDeliveryLevel ) ? r.sellerDeliveryLevel : false,
+          
+          rab: r.sellingReviews.valuationsAverage,
+          rabt: r.sellingReviews.totalCount,
+          ras: r.starsRating,
+          rast: r.ratingsCount
+          
+        },
+        language: lang,
+        skills: [],
+        education: [],
+        certification: [],
+        meta: meta
+      };
+      
+      thisClass.base[ meta.requestId ] = data;
+      return data;
     }
     scrap( doc ) {
       const thisClass = this;
@@ -407,7 +470,7 @@
         database.lives.forEach( function( e, i ) {
           html += '\
               <label class="-SSRhMt zsZmoTB cWwLjTL checkbox">\
-                <input type="checkbox" name="lives" value="' + e[ 1 ] + '" data-short="' + e[ 0 ] + '" ' + ( ( thisClass.is( document.querySelector( '.fwp-js-activate .more-filter-item.with-carrot.lives .checkbox-list.lives [data-short="DE"]' ) ) && document.querySelector( '.fwp-js-activate .more-filter-item.with-carrot.lives .checkbox-list.lives [data-short="DE"]' ).checked === true ) ? 'checked' : '' ) + '>\
+                <input type="checkbox" name="lives" value="' + e[ 1 ] + '" data-short="' + e[ 0 ] + '" ' + ( ( thisClass.is( document.querySelector( '.fwp-js-activate .more-filter-item.with-carrot.lives .checkbox-list.lives [data-short="' + e[ 0 ] + '"]' ) ) && document.querySelector( '.fwp-js-activate .more-filter-item.with-carrot.lives .checkbox-list.lives [data-short="' + e[ 0 ] + '"]' ).checked === true ) ? 'checked' : '' ) + '>\
                 <span class="FO1WDvp">\
                   <span class="XQskgrQ L8UwSlD" aria-hidden="true" style="width: 10px; height: 10px;">\
                     <svg width="11" height="9" viewBox="0 0 11 9" xmlns="http://www.w3.org/2000/svg">\
@@ -479,8 +542,8 @@
         lives.push( output[ i ] );
       } );
       if( sort ) {
-        lives.sort( ( a, b ) => ( a[ 2 ] < b[ 2 ] ? 1 : -1 ) ); //For Decending | console.log( lives );
-        // lives.sort( ( a, b ) => ( a[ 2 ] > b[ 2 ] ? 1 : -1 ) ); //For Ascending | console.log( lives );
+        lives.sort( ( a, b ) => ( a[ 2 ] < b[ 2 ] ? 1 : -1 ) ); //For Decending
+        // lives.sort( ( a, b ) => ( a[ 2 ] > b[ 2 ] ? 1 : -1 ) ); //For Ascending
       }
       if( rtn ) {return lives;}
       else {thisClass.database.lives = lives;}
@@ -489,6 +552,12 @@
       var arr = [];
       document.querySelectorAll( '.listings-perseus .floating-menu .menu-content .checkbox-list.speak .label' ).forEach( function( e, i ) {arr.push( e.innerText );} );
       console.log( JSON.stringify( arr ) );
+      var country = [], e;
+      Object.keys( flags ).forEach( function( i ) {
+          e = flags[ i ];
+          country.push( [ i, e ] );
+      } );
+      console.log( country );
     }
     getDatabase() {
       var database = {
@@ -506,8 +575,192 @@
           "Express 24H", "Up to 3 days", "Up to 7 days", "Anytime"
         ],
         flags: [
-          "ac", "ad", "ae", "af", "ag", "ai", "al", "am", "ao", "aq", "ar", "as", "at", "au", "aw", "ax", "az", "ba", "bb", "bd", "be", "bf", "bg", "bh", "bi", "bj", "bl", "bm", "bn", "bo", "bq", "br", "bs", "bt", "bv", "bw", "by", "bz", "ca", "cc", "cd", "cefta", "cf", "cg", "ch", "ci", "ck", "cl", "cm", "cn", "co", "cp", "cr", "cu", "cv", "cw", "cx", "cy", "cz", "de", "dg", "dj", "dk", "dm", "do", "dz", "ea", "ec", "ee", "eg", "eh", "er", "es-ct", "es-ga", "es", "et", "eu", "fi", "fj", "fk", "fm", "fo", "fr", "ga", "gb-eng", "gb-nir", "gb-sct", "gb-wls", "gb", "gd", "ge", "gf", "gg", "gh", "gi", "gl", "gm", "gn", "gp", "gq", "gr", "gs", "gt", "gu", "gw", "gy", "hk", "hm", "hn", "hr", "ht", "hu", "ic", "id", "ie", "il", "im", "in", "io", "iq", "ir", "is", "it", "je", "jm", "jo", "jp", "ke", "kg", "kh", "ki", "km", "kn", "kp", "kr", "kw", "ky", "kz", "la", "lb", "lc", "li", "lk", "lr", "ls", "lt", "lu", "lv", "ly", "ma", "mc", "md", "me", "mf", "mg", "mh", "mk", "ml", "mm", "mn", "mo", "mp", "mq", "mr", "ms", "mt", "mu", "mv", "mw", "mx", "my", "mz", "na", "nc", "ne", "nf", "ng", "ni", "nl", "no", "np", "nr", "nu", "nz", "om", "pa", "pe", "pf", "pg", "ph", "pk", "pl", "pm", "pn", "pr", "ps", "pt", "pw", "py", "qa", "re", "ro", "rs", "ru", "rw", "sa", "sb", "sc", "sd", "se", "sg", "sh", "si", "sj", "sk", "sl", "sm", "sn", "so", "sr", "ss", "st", "sv", "sx", "sy", "sz", "ta", "tc", "td", "tf", "tg", "th", "tj", "tk", "tl", "tm", "tn", "to", "tr", "tt", "tv", "tw", "tz", "ua", "ug", "um", "un", "us", "uy", "uz", "va", "vc", "ve", "vg", "vi", "vn", "vu", "wf", "ws", "xk", "xx", "ye", "yt", "za", "zm", "zw"
-        ]
+          ["ad","Andorra"], ["ae","United Arab Emirates"], ["af","Afghanistan"], ["ag","Antigua and Barbuda"], ["ai","Anguilla"], ["al","Albania"], ["am","Armenia"], ["ao","Angola"], ["aq","Antarctica"], ["ar","Argentina"], ["as","American Samoa"], ["at","Austria"], ["au","Australia"], ["aw","Aruba"], ["ax","Åland Islands"], ["az","Azerbaijan"], ["ba","Bosnia and Herzegovina"], ["bb","Barbados"], ["bd","Bangladesh"], ["be","Belgium"], ["bf","Burkina Faso"], ["bg","Bulgaria"], ["bh","Bahrain"], ["bi","Burundi"], ["bj","Benin"], ["bl","Saint Barthélemy"], ["bm","Bermuda"], ["bn","Brunei"], ["bo","Bolivia"], ["bq","Caribbean Netherlands"], ["br","Brazil"], ["bs","Bahamas"], ["bt","Bhutan"], ["bv","Bouvet Island"], ["bw","Botswana"], ["by","Belarus"], ["bz","Belize"], ["ca","Canada"], ["cc","Cocos (Keeling) Islands"], ["cd","DR Congo"], ["cf","Central African Republic"], ["cg","Republic of the Congo"], ["ch","Switzerland"], ["ci","Côte d'Ivoire (Ivory Coast)"], ["ck","Cook Islands"], ["cl","Chile"], ["cm","Cameroon"], ["cn","China"], ["co","Colombia"], ["cr","Costa Rica"], ["cu","Cuba"], ["cv","Cape Verde"], ["cw","Curaçao"], ["cx","Christmas Island"], ["cy","Cyprus"], ["cz","Czechia"], ["de","Germany"], ["dj","Djibouti"], ["dk","Denmark"], ["dm","Dominica"], ["do","Dominican Republic"], ["dz","Algeria"], ["ec","Ecuador"], ["ee","Estonia"], ["eg","Egypt"], ["eh","Western Sahara"], ["er","Eritrea"], ["es","Spain"], ["et","Ethiopia"], ["eu","European Union"], ["fi","Finland"], ["fj","Fiji"], ["fk","Falkland Islands"], ["fm","Micronesia"], ["fo","Faroe Islands"], ["fr","France"], ["ga","Gabon"], ["gb","United Kingdom"], ["gb-eng","England"], ["gb-nir","Northern Ireland"], ["gb-sct","Scotland"], ["gb-wls","Wales"], ["gd","Grenada"], ["ge","Georgia"], ["gf","French Guiana"], ["gg","Guernsey"], ["gh","Ghana"], ["gi","Gibraltar"], ["gl","Greenland"], ["gm","Gambia"], ["gn","Guinea"], ["gp","Guadeloupe"], ["gq","Equatorial Guinea"], ["gr","Greece"], ["gs","South Georgia"], ["gt","Guatemala"], ["gu","Guam"], ["gw","Guinea-Bissau"], ["gy","Guyana"], ["hk","Hong Kong"], ["hm","Heard Island and McDonald Islands"], ["hn","Honduras"], ["hr","Croatia"], ["ht","Haiti"], ["hu","Hungary"], ["id","Indonesia"], ["ie","Ireland"], ["il","Israel"], ["im","Isle of Man"], ["in","India"], ["io","British Indian Ocean Territory"], ["iq","Iraq"], ["ir","Iran"], ["is","Iceland"], ["it","Italy"], ["je","Jersey"], ["jm","Jamaica"], ["jo","Jordan"], ["jp","Japan"], ["ke","Kenya"], ["kg","Kyrgyzstan"], ["kh","Cambodia"], ["ki","Kiribati"], ["km","Comoros"], ["kn","Saint Kitts and Nevis"], ["kp","North Korea"], ["kr","South Korea"], ["kw","Kuwait"], ["ky","Cayman Islands"], ["kz","Kazakhstan"], ["la","Laos"], ["lb","Lebanon"], ["lc","Saint Lucia"], ["li","Liechtenstein"], ["lk","Sri Lanka"], ["lr","Liberia"], ["ls","Lesotho"], ["lt","Lithuania"], ["lu","Luxembourg"], ["lv","Latvia"], ["ly","Libya"], ["ma","Morocco"], ["mc","Monaco"], ["md","Moldova"], ["me","Montenegro"], ["mf","Saint Martin"], ["mg","Madagascar"], ["mh","Marshall Islands"], ["mk","North Macedonia"], ["ml","Mali"], ["mm","Myanmar"], ["mn","Mongolia"], ["mo","Macau"], ["mp","Northern Mariana Islands"], ["mq","Martinique"], ["mr","Mauritania"], ["ms","Montserrat"], ["mt","Malta"], ["mu","Mauritius"], ["mv","Maldives"], ["mw","Malawi"], ["mx","Mexico"], ["my","Malaysia"], ["mz","Mozambique"], ["na","Namibia"], ["nc","New Caledonia"], ["ne","Niger"], ["nf","Norfolk Island"], ["ng","Nigeria"], ["ni","Nicaragua"], ["nl","Netherlands"], ["no","Norway"], ["np","Nepal"], ["nr","Nauru"], ["nu","Niue"], ["nz","New Zealand"], ["om","Oman"], ["pa","Panama"], ["pe","Peru"], ["pf","French Polynesia"], ["pg","Papua New Guinea"], ["ph","Philippines"], ["pk","Pakistan"], ["pl","Poland"], ["pm","Saint Pierre and Miquelon"], ["pn","Pitcairn Islands"], ["pr","Puerto Rico"], ["ps","Palestine"], ["pt","Portugal"], ["pw","Palau"], ["py","Paraguay"], ["qa","Qatar"], ["re","Réunion"], ["ro","Romania"], ["rs","Serbia"], ["ru","Russia"], ["rw","Rwanda"], ["sa","Saudi Arabia"], ["sb","Solomon Islands"], ["sc","Seychelles"], ["sd","Sudan"], ["se","Sweden"], ["sg","Singapore"], ["sh","Saint Helena, Ascension and Tristan da Cunha"], ["si","Slovenia"], ["sj","Svalbard and Jan Mayen"], ["sk","Slovakia"], ["sl","Sierra Leone"], ["sm","San Marino"], ["sn","Senegal"], ["so","Somalia"], ["sr","Suriname"], ["ss","South Sudan"], ["st","São Tomé and Príncipe"], ["sv","El Salvador"], ["sx","Sint Maarten"], ["sy","Syria"], ["sz","Eswatini (Swaziland)"], ["tc","Turks and Caicos Islands"], ["td","Chad"], ["tf","French Southern and Antarctic Lands"], ["tg","Togo"], ["th","Thailand"], ["tj","Tajikistan"], ["tk","Tokelau"], ["tl","Timor-Leste"], ["tm","Turkmenistan"], ["tn","Tunisia"], ["to","Tonga"], ["tr","Turkey"], ["tt","Trinidad and Tobago"], ["tv","Tuvalu"], ["tw","Taiwan"], ["tz","Tanzania"], ["ua","Ukraine"], ["ug","Uganda"], ["um","United States Minor Outlying Islands"], ["un","United Nations"], ["us","United States"], ["us-ak","Alaska"], ["us-al","Alabama"], ["us-ar","Arkansas"], ["us-az","Arizona"], ["us-ca","California"], ["us-co","Colorado"], ["us-ct","Connecticut"], ["us-de","Delaware"], ["us-fl","Florida"], ["us-ga","Georgia"], ["us-hi","Hawaii"], ["us-ia","Iowa"], ["us-id","Idaho"], ["us-il","Illinois"], ["us-in","Indiana"], ["us-ks","Kansas"], ["us-ky","Kentucky"], ["us-la","Louisiana"], ["us-ma","Massachusetts"], ["us-md","Maryland"], ["us-me","Maine"], ["us-mi","Michigan"], ["us-mn","Minnesota"], ["us-mo","Missouri"], ["us-ms","Mississippi"], ["us-mt","Montana"], ["us-nc","North Carolina"], ["us-nd","North Dakota"], ["us-ne","Nebraska"], ["us-nh","New Hampshire"], ["us-nj","New Jersey"], ["us-nm","New Mexico"], ["us-nv","Nevada"], ["us-ny","New York"], ["us-oh","Ohio"], ["us-ok","Oklahoma"], ["us-or","Oregon"], ["us-pa","Pennsylvania"], ["us-ri","Rhode Island"], ["us-sc","South Carolina"], ["us-sd","South Dakota"], ["us-tn","Tennessee"], ["us-tx","Texas"], ["us-ut","Utah"], ["us-va","Virginia"], ["us-vt","Vermont"], ["us-wa","Washington"], ["us-wi","Wisconsin"], ["us-wv","West Virginia"], ["us-wy","Wyoming"], ["uy","Uruguay"], ["uz","Uzbekistan"], ["va","Vatican City (Holy See)"], ["vc","Saint Vincent and the Grenadines"], ["ve","Venezuela"], ["vg","British Virgin Islands"], ["vi","United States Virgin Islands"], ["vn","Vietnam"], ["vu","Vanuatu"], ["wf","Wallis and Futuna"], ["ws","Samoa"], ["xk","Kosovo"], ["ye","Yemen"], ["yt","Mayotte"], ["za","South Africa"], ["zm","Zambia"], ["zw","Zimbabwe"]
+        ],
+        langs: {
+          "ab":{"name":"Abkhaz", "nativeName":"аҧсуа"},
+          "aa":{"name":"Afar", "nativeName":"Afaraf"},
+          "af":{"name":"Afrikaans", "nativeName":"Afrikaans"},
+          "ak":{"name":"Akan", "nativeName":"Akan"},
+          "sq":{"name":"Albanian", "nativeName":"Shqip"},
+          "am":{"name":"Amharic", "nativeName":"አማርኛ"},
+          "ar":{"name":"Arabic", "nativeName":"العربية"},
+          "an":{"name":"Aragonese", "nativeName":"Aragonés"},
+          "hy":{"name":"Armenian", "nativeName":"Հայերեն"},
+          "as":{"name":"Assamese", "nativeName":"অসমীয়া"},
+          "av":{"name":"Avaric", "nativeName":"авар мацӀ, магӀарул мацӀ"},
+          "ae":{"name":"Avestan", "nativeName":"avesta"},
+          "ay":{"name":"Aymara", "nativeName":"aymar aru"},
+          "az":{"name":"Azerbaijani", "nativeName":"azərbaycan dili"},
+          "bm":{"name":"Bambara", "nativeName":"bamanankan"},
+          "ba":{"name":"Bashkir", "nativeName":"башҡорт теле"},
+          "eu":{"name":"Basque", "nativeName":"euskara, euskera"},
+          "be":{"name":"Belarusian", "nativeName":"Беларуская"},
+          "bn":{"name":"Bengali", "nativeName":"বাংলা"},
+          "bh":{"name":"Bihari", "nativeName":"भोजपुरी"},
+          "bi":{"name":"Bislama", "nativeName":"Bislama"},
+          "bs":{"name":"Bosnian", "nativeName":"bosanski jezik"},
+          "br":{"name":"Breton", "nativeName":"brezhoneg"},
+          "bg":{"name":"Bulgarian", "nativeName":"български език"},
+          "my":{"name":"Burmese", "nativeName":"ဗမာစာ"},
+          "ca":{"name":"Catalan; Valencian", "nativeName":"Català"},
+          "ch":{"name":"Chamorro", "nativeName":"Chamoru"},
+          "ce":{"name":"Chechen", "nativeName":"нохчийн мотт"},
+          "ny":{"name":"Chichewa; Chewa; Nyanja", "nativeName":"chiCheŵa, chinyanja"},
+          "zh":{"name":"Chinese", "nativeName":"中文 (Zhōngwén), 汉语, 漢語"},
+          "cv":{"name":"Chuvash", "nativeName":"чӑваш чӗлхи"},
+          "kw":{"name":"Cornish", "nativeName":"Kernewek"},
+          "co":{"name":"Corsican", "nativeName":"corsu, lingua corsa"},
+          "cr":{"name":"Cree", "nativeName":"ᓀᐦᐃᔭᐍᐏᐣ"},
+          "hr":{"name":"Croatian", "nativeName":"hrvatski"},
+          "cs":{"name":"Czech", "nativeName":"česky, čeština"},
+          "da":{"name":"Danish", "nativeName":"dansk"},
+          "dv":{"name":"Divehi; Dhivehi; Maldivian;", "nativeName":"ދިވެހި"},
+          "nl":{"name":"Dutch", "nativeName":"Nederlands, Vlaams"},
+          "en":{"name":"English", "nativeName":"English"},
+          "eo":{"name":"Esperanto", "nativeName":"Esperanto"},
+          "et":{"name":"Estonian", "nativeName":"eesti, eesti keel"},
+          "ee":{"name":"Ewe", "nativeName":"Eʋegbe"},
+          "fo":{"name":"Faroese", "nativeName":"føroyskt"},
+          "fj":{"name":"Fijian", "nativeName":"vosa Vakaviti"},
+          "fi":{"name":"Finnish", "nativeName":"suomi, suomen kieli"},
+          "fr":{"name":"French", "nativeName":"français, langue française"},
+          "ff":{"name":"Fula; Fulah; Pulaar; Pular", "nativeName":"Fulfulde, Pulaar, Pular"},
+          "gl":{"name":"Galician", "nativeName":"Galego"},
+          "ka":{"name":"Georgian", "nativeName":"ქართული"},
+          "de":{"name":"German", "nativeName":"Deutsch"},
+          "el":{"name":"Greek, Modern", "nativeName":"Ελληνικά"},
+          "gn":{"name":"Guaraní", "nativeName":"Avañeẽ"},
+          "gu":{"name":"Gujarati", "nativeName":"ગુજરાતી"},
+          "ht":{"name":"Haitian; Haitian Creole", "nativeName":"Kreyòl ayisyen"},
+          "ha":{"name":"Hausa", "nativeName":"Hausa, هَوُسَ"},
+          "he":{"name":"Hebrew (modern)", "nativeName":"עברית"},
+          "hz":{"name":"Herero", "nativeName":"Otjiherero"},
+          "hi":{"name":"Hindi", "nativeName":"हिन्दी, हिंदी"},
+          "ho":{"name":"Hiri Motu", "nativeName":"Hiri Motu"},
+          "hu":{"name":"Hungarian", "nativeName":"Magyar"},
+          "ia":{"name":"Interlingua", "nativeName":"Interlingua"},
+          "id":{"name":"Indonesian", "nativeName":"Bahasa Indonesia"},
+          "ie":{"name":"Interlingue", "nativeName":"Originally called Occidental; then Interlingue after WWII"},
+          "ga":{"name":"Irish", "nativeName":"Gaeilge"},
+          "ig":{"name":"Igbo", "nativeName":"Asụsụ Igbo"},
+          "ik":{"name":"Inupiaq", "nativeName":"Iñupiaq, Iñupiatun"},
+          "io":{"name":"Ido", "nativeName":"Ido"},
+          "is":{"name":"Icelandic", "nativeName":"Íslenska"},
+          "it":{"name":"Italian", "nativeName":"Italiano"},
+          "iu":{"name":"Inuktitut", "nativeName":"ᐃᓄᒃᑎᑐᑦ"},
+          "ja":{"name":"Japanese", "nativeName":"日本語 (にほんご／にっぽんご)"},
+          "jv":{"name":"Javanese", "nativeName":"basa Jawa"},
+          "kl":{"name":"Kalaallisut, Greenlandic", "nativeName":"kalaallisut, kalaallit oqaasii"},
+          "kn":{"name":"Kannada", "nativeName":"ಕನ್ನಡ"},
+          "kr":{"name":"Kanuri", "nativeName":"Kanuri"},
+          "ks":{"name":"Kashmiri", "nativeName":"कश्मीरी, كشميري‎"},
+          "kk":{"name":"Kazakh", "nativeName":"Қазақ тілі"},
+          "km":{"name":"Khmer", "nativeName":"ភាសាខ្មែរ"},
+          "ki":{"name":"Kikuyu, Gikuyu", "nativeName":"Gĩkũyũ"},
+          "rw":{"name":"Kinyarwanda", "nativeName":"Ikinyarwanda"},
+          "ky":{"name":"Kirghiz, Kyrgyz", "nativeName":"кыргыз тили"},
+          "kv":{"name":"Komi", "nativeName":"коми кыв"},
+          "kg":{"name":"Kongo", "nativeName":"KiKongo"},
+          "ko":{"name":"Korean", "nativeName":"한국어 (韓國語), 조선말 (朝鮮語)"},
+          "ku":{"name":"Kurdish", "nativeName":"Kurdî, كوردی‎"},
+          "kj":{"name":"Kwanyama, Kuanyama", "nativeName":"Kuanyama"},
+          "la":{"name":"Latin", "nativeName":"latine, lingua latina"},
+          "lb":{"name":"Luxembourgish, Letzeburgesch", "nativeName":"Lëtzebuergesch"},
+          "lg":{"name":"Luganda", "nativeName":"Luganda"},
+          "li":{"name":"Limburgish, Limburgan, Limburger", "nativeName":"Limburgs"},
+          "ln":{"name":"Lingala", "nativeName":"Lingála"},
+          "lo":{"name":"Lao", "nativeName":"ພາສາລາວ"},
+          "lt":{"name":"Lithuanian", "nativeName":"lietuvių kalba"},
+          "lu":{"name":"Luba-Katanga", "nativeName":""},
+          "lv":{"name":"Latvian", "nativeName":"latviešu valoda"},
+          "gv":{"name":"Manx", "nativeName":"Gaelg, Gailck"},
+          "mk":{"name":"Macedonian", "nativeName":"македонски јазик"},
+          "mg":{"name":"Malagasy", "nativeName":"Malagasy fiteny"},
+          "ms":{"name":"Malay", "nativeName":"bahasa Melayu, بهاس ملايو‎"},
+          "ml":{"name":"Malayalam", "nativeName":"മലയാളം"},
+          "mt":{"name":"Maltese", "nativeName":"Malti"},
+          "mi":{"name":"Māori", "nativeName":"te reo Māori"},
+          "mr":{"name":"Marathi (Marāṭhī)", "nativeName":"मराठी"},
+          "mh":{"name":"Marshallese", "nativeName":"Kajin M̧ajeļ"},
+          "mn":{"name":"Mongolian", "nativeName":"монгол"},
+          "na":{"name":"Nauru", "nativeName":"Ekakairũ Naoero"},
+          "nv":{"name":"Navajo, Navaho", "nativeName":"Diné bizaad, Dinékʼehǰí"},
+          "nb":{"name":"Norwegian Bokmål", "nativeName":"Norsk bokmål"},
+          "nd":{"name":"North Ndebele", "nativeName":"isiNdebele"},
+          "ne":{"name":"Nepali", "nativeName":"नेपाली"},
+          "ng":{"name":"Ndonga", "nativeName":"Owambo"},
+          "nn":{"name":"Norwegian Nynorsk", "nativeName":"Norsk nynorsk"},
+          "no":{"name":"Norwegian", "nativeName":"Norsk"},
+          "ii":{"name":"Nuosu", "nativeName":"ꆈꌠ꒿ Nuosuhxop"},
+          "nr":{"name":"South Ndebele", "nativeName":"isiNdebele"},
+          "oc":{"name":"Occitan", "nativeName":"Occitan"},
+          "oj":{"name":"Ojibwe, Ojibwa", "nativeName":"ᐊᓂᔑᓈᐯᒧᐎᓐ"},
+          "cu":{"name":"Old Church Slavonic, Church Slavic, Church Slavonic, Old Bulgarian, Old Slavonic", "nativeName":"ѩзыкъ словѣньскъ"},
+          "om":{"name":"Oromo", "nativeName":"Afaan Oromoo"},
+          "or":{"name":"Oriya", "nativeName":"ଓଡ଼ିଆ"},
+          "os":{"name":"Ossetian, Ossetic", "nativeName":"ирон æвзаг"},
+          "pa":{"name":"Panjabi, Punjabi", "nativeName":"ਪੰਜਾਬੀ, پنجابی‎"},
+          "pi":{"name":"Pāli", "nativeName":"पाऴि"},
+          "fa":{"name":"Persian", "nativeName":"فارسی"},
+          "pl":{"name":"Polish", "nativeName":"polski"},
+          "ps":{"name":"Pashto, Pushto", "nativeName":"پښتو"},
+          "pt":{"name":"Portuguese", "nativeName":"Português"},
+          "qu":{"name":"Quechua", "nativeName":"Runa Simi, Kichwa"},
+          "rm":{"name":"Romansh", "nativeName":"rumantsch grischun"},
+          "rn":{"name":"Kirundi", "nativeName":"kiRundi"},
+          "ro":{"name":"Romanian, Moldavian, Moldovan", "nativeName":"română"},
+          "ru":{"name":"Russian", "nativeName":"русский язык"},
+          "sa":{"name":"Sanskrit (Saṁskṛta)", "nativeName":"संस्कृतम्"},
+          "sc":{"name":"Sardinian", "nativeName":"sardu"},
+          "sd":{"name":"Sindhi", "nativeName":"सिन्धी, سنڌي، سندھی‎"},
+          "se":{"name":"Northern Sami", "nativeName":"Davvisámegiella"},
+          "sm":{"name":"Samoan", "nativeName":"gagana faa Samoa"},
+          "sg":{"name":"Sango", "nativeName":"yângâ tî sängö"},
+          "sr":{"name":"Serbian", "nativeName":"српски језик"},
+          "gd":{"name":"Scottish Gaelic; Gaelic", "nativeName":"Gàidhlig"},
+          "sn":{"name":"Shona", "nativeName":"chiShona"},
+          "si":{"name":"Sinhala, Sinhalese", "nativeName":"සිංහල"},
+          "sk":{"name":"Slovak", "nativeName":"slovenčina"},
+          "sl":{"name":"Slovene", "nativeName":"slovenščina"},
+          "so":{"name":"Somali", "nativeName":"Soomaaliga, af Soomaali"},
+          "st":{"name":"Southern Sotho", "nativeName":"Sesotho"},
+          "es":{"name":"Spanish; Castilian", "nativeName":"español, castellano"},
+          "su":{"name":"Sundanese", "nativeName":"Basa Sunda"},
+          "sw":{"name":"Swahili", "nativeName":"Kiswahili"},
+          "ss":{"name":"Swati", "nativeName":"SiSwati"},
+          "sv":{"name":"Swedish", "nativeName":"svenska"},
+          "ta":{"name":"Tamil", "nativeName":"தமிழ்"},
+          "te":{"name":"Telugu", "nativeName":"తెలుగు"},
+          "tg":{"name":"Tajik", "nativeName":"тоҷикӣ, toğikī, تاجیکی‎"},
+          "th":{"name":"Thai", "nativeName":"ไทย"},
+          "ti":{"name":"Tigrinya", "nativeName":"ትግርኛ"},
+          "bo":{"name":"Tibetan Standard, Tibetan, Central", "nativeName":"བོད་ཡིག"},
+          "tk":{"name":"Turkmen", "nativeName":"Türkmen, Түркмен"},
+          "tl":{"name":"Tagalog", "nativeName":"Wikang Tagalog, ᜏᜒᜃᜅ᜔ ᜆᜄᜎᜓᜄ᜔"},
+          "tn":{"name":"Tswana", "nativeName":"Setswana"},
+          "to":{"name":"Tonga (Tonga Islands)", "nativeName":"faka Tonga"},
+          "tr":{"name":"Turkish", "nativeName":"Türkçe"},
+          "ts":{"name":"Tsonga", "nativeName":"Xitsonga"},
+          "tt":{"name":"Tatar", "nativeName":"татарча, tatarça, تاتارچا‎"},
+          "tw":{"name":"Twi", "nativeName":"Twi"},
+          "ty":{"name":"Tahitian", "nativeName":"Reo Tahiti"},
+          "ug":{"name":"Uighur, Uyghur", "nativeName":"Uyƣurqə, ئۇيغۇرچە‎"},
+          "uk":{"name":"Ukrainian", "nativeName":"українська"},
+          "ur":{"name":"Urdu", "nativeName":"اردو"},
+          "uz":{"name":"Uzbek", "nativeName":"zbek, Ўзбек, أۇزبېك‎"},
+          "ve":{"name":"Venda", "nativeName":"Tshivenḓa"},
+          "vi":{"name":"Vietnamese", "nativeName":"Tiếng Việt"},
+          "vo":{"name":"Volapük", "nativeName":"Volapük"},
+          "wa":{"name":"Walloon", "nativeName":"Walon"},
+          "cy":{"name":"Welsh", "nativeName":"Cymraeg"},
+          "wo":{"name":"Wolof", "nativeName":"Wollof"},
+          "fy":{"name":"Western Frisian", "nativeName":"Frysk"},
+          "xh":{"name":"Xhosa", "nativeName":"isiXhosa"},
+          "yi":{"name":"Yiddish", "nativeName":"ייִדיש"},
+          "yo":{"name":"Yoruba", "nativeName":"Yorùbá"},
+          "za":{"name":"Zhuang, Chuang", "nativeName":"Saɯ cueŋƅ, Saw cuengh"}
+        }
       };
       return database;
     }
@@ -519,12 +772,22 @@
     notice() {}
     flags( e = false ) {
       const thisClass = this;
-      var flags = thisClass.database.flags, rtn = ( flags.includes( e.toLowerCase() ) ) ? e.toLowerCase() : 'xx';
+      var flags = thisClass.database.flags, rtn = false;
       if( e ) {
         thisClass.database.lives.forEach( function( l, i ) {
           if( l[ 1 ].toLowerCase() == e.toLowerCase() ) {rtn = l[ 0 ].toLowerCase();}
         } );
-        return rtn;
+        if( ! rtn ) {
+          flags.forEach( function( l, i ) {
+            if( l[ 1 ].toLowerCase() == e.toLowerCase() ) {rtn = l[ 0 ].toLowerCase();}
+          } );
+        }
+        // 16x12, 20x15, 24x18, 28x21, 32x24, 36x27, 40x30, 48x36, 56x42, 60x45, 64x48, 72x54, 80x60, 84x63, 96x72, 108x81, 112x84, 120x90, 128x96, 144x108, 160x120, 192x144, 224x168, 256x192
+        if( thisClass.isCDN ) {
+          return ( rtn ) ? rtn : 'xx';
+        } else {
+          return ( rtn ) ? 'https://flagcdn.com/20x15/' + rtn + '.png' : 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/flags/4x3/xx.svg';
+        }
       } else {
         return flags;
       }
@@ -615,10 +878,7 @@
         vase = output;
       }
       
-      
-      
-      console.log( 'Filter', {filters: args, list: thisClass.base} );
-      console.log( 'Filtered', vase );
+      // console.log( 'Filter', {filters: args, list: thisClass.base} );console.log( 'Filtered', vase );
 
       thisClass.getLists( vase );
     }
