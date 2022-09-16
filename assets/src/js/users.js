@@ -1,4 +1,4 @@
-import 'regenerator-runtime/runtime';
+// import 'regenerator-runtime/runtime';
 
 
 // script loader
@@ -6,3 +6,5 @@ import './content/buyerRequestsDetails';
 
 // Css loader
 import "../sass/users.scss";
+
+// Icons Loader

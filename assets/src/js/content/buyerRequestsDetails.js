@@ -50,13 +50,14 @@
     }
     trigger() {
       const thisClass = this;
+      document.querySelector( '.js-db-table' ).classList.add( 'fwp-js-activate' );
+      var link = document.createElement( 'link' );link.href = 'https://cdn.jsdelivr.net/gh/lipis/flag-icons@6.6.6/css/flag-icons.min.css';link.rel = 'stylesheet';document.head.appendChild( link );
       setInterval( () => {
         thisClass.load();
       }, 5000 );
     }
     load() {
       const thisClass = this;
-      document.querySelector( '.js-db-table' ).classList.add( 'fwp-js-activate' );
       document.querySelectorAll( '.js-db-table table tbody tr' ).forEach( function( e, i ) {
         if( ! thisClass.is( e.dataset.fwpid ) ) {
           if( e.querySelectorAll( 'a.js-send-offer' ).length >= 1 ) {
@@ -94,6 +95,9 @@
           }
         } else {
           // Already Executed.
+          if( thisClass.is( thisClass.base[ e.dataset.fwpid ] ) ) {
+            thisClass.base[ e.dataset.fwpid ].meta.trHtml = e.innerHTML;
+          }
         }
       } );
     }
@@ -101,6 +105,7 @@
       const thisClass = this;
       if( ! meta.requestId ) {return;}
       e.setAttribute( 'data-fwpid', meta.requestId );
+      meta.trHtml = e.innerHTML;
       $.ajax( {
         url: "https://www.fiverr.com/" + meta.username,
         dataType: 'text',
@@ -126,21 +131,66 @@
     }
     execute( args, e ) {
       const thisClass = this;
+      var node, a, div, i, span;
+      if( e.querySelectorAll( 'td .fwp-tr-td' ).length <= 0 ) {
+        e.querySelectorAll( 'td' ).forEach( function( td, i ) {
+          node = document.createElement( 'div' );node.classList.add( 'fwp-tr-td' );td.appendChild( node );
+        } );
+      }
       // Insert Country Name after DATE.
-      if( e.querySelectorAll( 'td.date .extension-requestpage-country' ).length <= 0 && e.querySelector( 'td.date' ) !== null ) {
-        var node = document.createElement( 'strong' );node.classList.add( 'extension-requestpage-country' );node.innerText = ( args.info.location ) ? args.info.location : 'N/A';
-        e.querySelector( 'td.date' ).appendChild( node );
+      if( e.querySelectorAll( 'td.date .fwp-c-location' ).length <= 0 ) {
+        i = document.createElement( 'i' );i.classList.add( 'fwp-c-location', 'fi', 'fi-' + thisClass.flags( args.info.location ) );e.querySelector( 'td.date .fwp-tr-td' ).appendChild( i );
+        node = document.createElement( 'span' );node.classList.add( 'fwp-c-location' );node.innerText = ( args.info.location ) ? args.info.location : 'N/A';
+        e.querySelector( 'td.date .fwp-tr-td' ).appendChild( node );
       }
       
-      // Insert Country Name after USER Image.
-      if( e.querySelectorAll( 'td.profile-40 .extension-requestpage-username' ).length <= 0 && e.querySelector( 'td.profile-40' ) !== null ) {
-        var node = document.createElement( 'a' );node.classList.add( 'extension-requestpage-username' );node.href = 'https://www.fiverr.com/' + args.meta.username;node.target = '_blank';node.innerText = args.meta.username;
-        e.querySelector( 'td.profile-40' ).appendChild( node );
+      // Insert Buyer Account date after USER Image.
+      if( e.querySelectorAll( 'td.profile-40 .fwp-c-date' ).length <= 0 ) {
+        node = document.createElement( 'span' );node.classList.add( 'fwp-c-name' );node.innerText = args.meta.username;e.querySelector( 'td.profile-40' ).appendChild( node );
+        node = document.createElement( 'span' );node.classList.add( 'fwp-c-date' );node.innerText = thisClass.is( args.info.since ) ? args.info.since : 'N/A';
+        e.querySelector( 'td.profile-40 .fwp-tr-td' ).appendChild( thisClass.icons( 'profile' ) );e.querySelector( 'td.profile-40 .fwp-tr-td' ).appendChild( node );
       }
       
+      // Insert Buyer Account review after Descriptions.
+      if( e.querySelectorAll( 'td.text-wide .fwp-c-review' ).length <= 0 ) {
+        var div = document.createElement( 'div' ),
+            div1 = document.createElement( 'div' ),
+            div2 = document.createElement( 'div' );
+        div.classList.add( 'fwp-wrap-review' );div1.classList.add( 'fwp-wrap-review-col' );div2.classList.add( 'fwp-wrap-review-col' );div1.appendChild( thisClass.icons( 'review' ) );div2.appendChild( thisClass.icons( 'review' ) );
+        span = document.createElement( 'span' );span.innerText = 'Reviews as Buyer';div1.appendChild( span );
+        span = document.createElement( 'span' );span.innerText = 'Reviews as Seller';div2.appendChild( span );
+
+        span = document.createElement( 'span' );span.innerText = thisClass.is( args.rating.rab ) ? args.rating.rab + ( thisClass.is( args.rating.rabt ) ? args.rating.rabt : '' ) : 'None';div1.appendChild( span );
+        span = document.createElement( 'span' );span.innerText = thisClass.is( args.rating.ras ) ? args.rating.ras + ( thisClass.is( args.rating.rast ) ? args.rating.rast : '' ) : 'None';div2.appendChild( span );
+        
+        div.appendChild( div1 );div.appendChild( div2 );
+        e.querySelector( 'td.text-wide .fwp-tr-td, td.see-more .fwp-tr-td' ).appendChild( div );
+      }
+      
+      // Insert Buyer Responding time after OFFERS SENT.
+      // Nothing. This field width is not enough
+      if( e.querySelectorAll( 'td.applications .fwp-c-link' ).length <= 0 ) {
+        node = document.createElement( 'a' );node.classList.add( 'fwp-c-link' );node.href = 'https://www.fiverr.com/' + args.meta.username;node.target = '_blank';
+        node.appendChild( thisClass.icons( 'link' ) );e.querySelector( 'td.applications .fwp-tr-td' ).appendChild( node );
+      }
+
+      // Insert Buyer Online Status time after DURATION.
+      if( e.querySelectorAll( 'td.hidden-action:nth-child(5) .fwp-c-status' ).length <= 0 ) {
+        var status = ( thisClass.is( args.info.online ) && ( args.info.online.toLowerCase() ).includes( 'online' ) ) ? 'Online' : 'Offline';
+        node = document.createElement( 'span' );node.classList.add( 'fwp-c-online' );node.innerText = status;
+        e.querySelector( 'td.hidden-action:nth-child(5) .fwp-tr-td' ).appendChild( thisClass.icons( status.toLowerCase() ) );e.querySelector( 'td.hidden-action:nth-child(5) .fwp-tr-td' ).appendChild( node );
+      }
+
+      
+      // Insert Buyer Responding time after Price and Button.
+      if( e.querySelectorAll( 'td.hidden-action:nth-child(6) .fwp-c-response' ).length <= 0 && e.querySelector( 'td.hidden-action:nth-child(6)' ) !== null ) {
+        node = document.createElement( 'span' );node.classList.add( 'fwp-c-response' );node.innerText = thisClass.is( args.info.response ) ? args.info.response : 'N/A';
+        e.querySelector( 'td.hidden-action:nth-child(6) .fwp-tr-td' ).appendChild( thisClass.icons( 'response' ) );e.querySelector( 'td.hidden-action:nth-child(6) .fwp-tr-td' ).appendChild( node );
+      }
+
       // Insert an Iframe after Description.
       // if( e.querySelectorAll( 'td.see-more .extension-requestpage-iframe' ).length <= 0 && e.querySelector( 'td.see-more' ) !== null ) {
-      //   var node = document.createElement( 'iframe' );node.classList.add( 'extension-requestpage-iframe' );node.src = 'https://www.fiverr.com/' + args.meta.username;node.setAttribute( 'frameborder', 0 );node.setAttribute( 'allowfullscreen', true );
+      //   node = document.createElement( 'iframe' );node.classList.add( 'extension-requestpage-iframe' );node.src = 'https://www.fiverr.com/' + args.meta.username;node.setAttribute( 'frameborder', 0 );node.setAttribute( 'allowfullscreen', true );
       //   // e.querySelector( 'td.see-more' ).appendChild( node );
       // }
     }
@@ -153,6 +203,10 @@
           scl = thisClass.is( doc.querySelector( '.reviews-package .reviews-header .summary ul.header-stars li:nth-child( 1 ) .orca-rating .rating-score' ) ) ? doc.querySelector( '.reviews-package .reviews-header .summary ul.header-stars li:nth-child( 1 ) .orca-rating .rating-score' ).innerText : false,
           rtf = thisClass.is( doc.querySelector( '.reviews-package .reviews-header .summary ul.header-stars li:nth-child( 2 ) .orca-rating .rating-score' ) ) ? doc.querySelector( '.reviews-package .reviews-header .summary ul.header-stars li:nth-child( 2 ) .orca-rating .rating-score' ).innerText : false,
           sad = thisClass.is( doc.querySelector( '.reviews-package .reviews-header .summary ul.header-stars li:nth-child( 3 ) .orca-rating .rating-score' ) ) ? doc.querySelector( '.reviews-package .reviews-header .summary ul.header-stars li:nth-child( 3 ) .orca-rating .rating-score' ).innerText : false,
+          ras = thisClass.is( doc.querySelector( '#reviews_header_as_seller .orca-rating .rating-score' ) ) ? doc.querySelector( '#reviews_header_as_seller .orca-rating .rating-score' ).innerText : false,
+          rast = thisClass.is( doc.querySelector( '#reviews_header_as_seller .orca-rating .ratings-count' ) ) ? doc.querySelector( '#reviews_header_as_seller .orca-rating .ratings-count' ).innerText : false,
+          rab = thisClass.is( doc.querySelector( '#reviews_header_as_buyer .orca-rating .rating-score' ) ) ? doc.querySelector( '#reviews_header_as_buyer .orca-rating .rating-score' ).innerText : false,
+          rabt = thisClass.is( doc.querySelector( '#reviews_header_as_buyer .orca-rating .ratings-count' ) ) ? doc.querySelector( '#reviews_header_as_buyer .orca-rating .ratings-count' ).innerText : false,
           l = thisClass.is( doc.querySelector( '.seller-card ul.user-stats li.location b' ) ) ? doc.querySelector( '.seller-card ul.user-stats li.location b' ).innerText : false,
           ms = thisClass.is( doc.querySelector( '.seller-card ul.user-stats li.member-since b' ) ) ? doc.querySelector( '.seller-card ul.user-stats li.member-since b' ).innerText : false,
           rt = thisClass.is( doc.querySelector( '.seller-card ul.user-stats li.response-time b' ) ) ? doc.querySelector( '.seller-card ul.user-stats li.response-time b' ).innerText : false,
@@ -182,7 +236,11 @@
             html: rth,
             scl: scl,
             rtf: rtf,
-            sad: sad
+            sad: sad,
+            rab: rab,
+            rabt: rabt,
+            ras: ras,
+            rast: rast
           },
           language: lg,
           skills: skl,
@@ -376,7 +434,7 @@
         database.speak.forEach( function( e, i ) {
           html += '\
           <label class="-SSRhMt zsZmoTB cWwLjTL checkbox">\
-              <input type="checkbox" name="speak" value="' + e + '">\
+              <input type="checkbox" name="speak" value="' + e[ 0 ] + '">\
               <span class="FO1WDvp">\
                 <span class="XQskgrQ L8UwSlD" aria-hidden="true" style="width: 10px; height: 10px;">\
                   <svg width="11" height="9" viewBox="0 0 11 9" xmlns="http://www.w3.org/2000/svg">\
@@ -385,7 +443,8 @@
                 </span>\
               </span>\
               <div class="inner-checkbox">\
-                <span class="label">' + e + '</span>\
+                <span class="label">' + e[ 0 ] + '</span>\
+                ' + ( ( e[ 1 ] ) ? '<span class="count"> (' + e[ 1 ] + ')</span>' : '' ) + '\
               </div>\
             </label>';
         } );
@@ -397,13 +456,13 @@
     }
     updateFilters( tr = 'all' ) {
       const thisClass = this;var tr = 'lives', html, node, selector = '.fwp-js-activate .listings-perseus .floating-menu .menu-content .content-scroll .more-filter-item.with-carrot.' + tr;
-      thisClass.getLive( false );
+      thisClass.getLive( false, true );
       if( thisClass.is( document.querySelector( selector ) ) ) {
         html = thisClass.getFilters( tr );node = document.createElement( 'div' );node.innerHTML = html;html = thisClass.is( node.querySelector( '.more-filter-item.with-carrot.' + tr ) ) ? node.querySelector( '.more-filter-item.with-carrot.' + tr ).innerHTML : html;
         document.querySelector( selector ).innerHTML = html;
       }
     }
-    getLive( rtn = true ) {
+    getLive( rtn = true, sort = false ) {
       const thisClass = this;
       var vase = thisClass.base, lives = thisClass.getDatabase().lives, lv = '', output = [], e;
       lives.forEach( function( lv, l ) {
@@ -419,6 +478,10 @@
       Object.keys( output ).forEach( function( i ) {
         lives.push( output[ i ] );
       } );
+      if( sort ) {
+        lives.sort( ( a, b ) => ( a[ 2 ] < b[ 2 ] ? 1 : -1 ) ); //For Decending | console.log( lives );
+        // lives.sort( ( a, b ) => ( a[ 2 ] > b[ 2 ] ? 1 : -1 ) ); //For Ascending | console.log( lives );
+      }
       if( rtn ) {return lives;}
       else {thisClass.database.lives = lives;}
     }
@@ -430,7 +493,7 @@
     getDatabase() {
       var database = {
         speak: [
-          "English", "French", "Spanish", "Urdu", "German", "Hindi", "Bengali", "Arabic", "Italian", "Russian", "Portuguese", "Punjabi", "Dutch", "Ukrainian", "Gujarati", "Chinese", "Turkish", "Hebrew", "Tamil", "Polish", "Marathi", "Malayalam", "Telugu", "Persian", "Vietnamese", "Kannada", "Thai", "Oriya", "Javanese", "Burmese"
+          [ "English" ], [ "French" ], [ "Spanish" ], [ "Urdu" ], [ "German" ], [ "Hindi" ], [ "Bengali" ], [ "Arabic" ], [ "Italian" ], [ "Russian" ], [ "Portuguese" ], [ "Punjabi" ], [ "Dutch" ], [ "Ukrainian" ], [ "Gujarati" ], [ "Chinese" ], [ "Turkish" ], [ "Hebrew" ], [ "Tamil" ], [ "Polish" ], [ "Marathi" ], [ "Malayalam" ], [ "Telugu" ], [ "Persian" ], [ "Vietnamese" ], [ "Kannada" ], [ "Thai" ], [ "Oriya" ], [ "Javanese" ], [ "Burmese" ]
         ],
         label: [
           // all lowercase and replace " " with "_"
@@ -441,6 +504,9 @@
         ],
         delivery: [
           "Express 24H", "Up to 3 days", "Up to 7 days", "Anytime"
+        ],
+        flags: [
+          "ac", "ad", "ae", "af", "ag", "ai", "al", "am", "ao", "aq", "ar", "as", "at", "au", "aw", "ax", "az", "ba", "bb", "bd", "be", "bf", "bg", "bh", "bi", "bj", "bl", "bm", "bn", "bo", "bq", "br", "bs", "bt", "bv", "bw", "by", "bz", "ca", "cc", "cd", "cefta", "cf", "cg", "ch", "ci", "ck", "cl", "cm", "cn", "co", "cp", "cr", "cu", "cv", "cw", "cx", "cy", "cz", "de", "dg", "dj", "dk", "dm", "do", "dz", "ea", "ec", "ee", "eg", "eh", "er", "es-ct", "es-ga", "es", "et", "eu", "fi", "fj", "fk", "fm", "fo", "fr", "ga", "gb-eng", "gb-nir", "gb-sct", "gb-wls", "gb", "gd", "ge", "gf", "gg", "gh", "gi", "gl", "gm", "gn", "gp", "gq", "gr", "gs", "gt", "gu", "gw", "gy", "hk", "hm", "hn", "hr", "ht", "hu", "ic", "id", "ie", "il", "im", "in", "io", "iq", "ir", "is", "it", "je", "jm", "jo", "jp", "ke", "kg", "kh", "ki", "km", "kn", "kp", "kr", "kw", "ky", "kz", "la", "lb", "lc", "li", "lk", "lr", "ls", "lt", "lu", "lv", "ly", "ma", "mc", "md", "me", "mf", "mg", "mh", "mk", "ml", "mm", "mn", "mo", "mp", "mq", "mr", "ms", "mt", "mu", "mv", "mw", "mx", "my", "mz", "na", "nc", "ne", "nf", "ng", "ni", "nl", "no", "np", "nr", "nu", "nz", "om", "pa", "pe", "pf", "pg", "ph", "pk", "pl", "pm", "pn", "pr", "ps", "pt", "pw", "py", "qa", "re", "ro", "rs", "ru", "rw", "sa", "sb", "sc", "sd", "se", "sg", "sh", "si", "sj", "sk", "sl", "sm", "sn", "so", "sr", "ss", "st", "sv", "sx", "sy", "sz", "ta", "tc", "td", "tf", "tg", "th", "tj", "tk", "tl", "tm", "tn", "to", "tr", "tt", "tv", "tw", "tz", "ua", "ug", "um", "un", "us", "uy", "uz", "va", "vc", "ve", "vg", "vi", "vn", "vu", "wf", "ws", "xk", "xx", "ye", "yt", "za", "zm", "zw"
         ]
       };
       return database;
@@ -449,6 +515,35 @@
       // 'label', , 'speak'
       var permit = [ 'budget', 'delivery', 'lives' ];
       return permit.includes( e );
+    }
+    notice() {}
+    flags( e = false ) {
+      const thisClass = this;
+      var flags = thisClass.database.flags, rtn = ( flags.includes( e.toLowerCase() ) ) ? e.toLowerCase() : 'xx';
+      if( e ) {
+        thisClass.database.lives.forEach( function( l, i ) {
+          if( l[ 1 ].toLowerCase() == e.toLowerCase() ) {rtn = l[ 0 ].toLowerCase();}
+        } );
+        return rtn;
+      } else {
+        return flags;
+      }
+    }
+    icons( tr ) {
+      const thisClass = this;
+      var icons = {
+        review: '<svg width="16px" height="15px" viewBox="0 0 16 15" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M16 5.81285C16 5.98299 15.875 6.14367 15.75 6.26654L12.2596 9.61248L13.0865 14.3384C13.0962 14.4045 13.0962 14.4612 13.0962 14.5274C13.0962 14.7732 12.9808 15 12.7019 15C12.5673 15 12.4327 14.9527 12.3173 14.8866L8 12.656L3.68269 14.8866C3.55769 14.9527 3.43269 15 3.29808 15C3.01923 15 2.89423 14.7732 2.89423 14.5274C2.89423 14.4612 2.90385 14.4045 2.91346 14.3384L3.74038 9.61248L0.240385 6.26654C0.125 6.14367 0 5.98299 0 5.81285C0 5.5293 0.298077 5.41588 0.538462 5.37807L5.36539 4.68809L7.52885 0.387524C7.61539 0.207939 7.77885 0 8 0C8.22115 0 8.38462 0.207939 8.47115 0.387524L10.6346 4.68809L15.4615 5.37807C15.6923 5.41588 16 5.5293 16 5.81285Z"></path></svg>',
+        profile: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" width="16px" height="15px" viewBox="0 0 92 92" enable-background="new 0 0 92 92" xml:space="preserve"><path id="XMLID_1253_" d="M46,57.1c14.8,0,26.9-12.1,26.9-27C72.9,15.1,60.8,3,46,3S19.1,15.1,19.1,30C19.1,45,31.2,57.1,46,57.1z   M46,11c10.4,0,18.9,8.5,18.9,19c0,10.5-8.5,19-18.9,19s-18.9-8.5-18.9-19C27.1,19.5,35.6,11,46,11z M58.5,59.7  c-1.3-0.4-2.8-0.1-3.8,0.8L46,67.9l-8.7-7.4c-1.1-0.9-2.5-1.2-3.8-0.8C27.9,61.5,0,71.1,0,85c0,2.2,1.8,4,4,4h84c2.2,0,4-1.8,4-4  C92,71.1,64.1,61.5,58.5,59.7z M10.1,81c4.4-4.7,15-9.9,23.8-12.9l9.5,8.1c1.5,1.3,3.7,1.3,5.2,0l9.5-8.1  c8.8,3.1,19.4,8.3,23.8,12.9H10.1z"/></svg>',
+        'online': '<svg width="16px" height="15px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2z" fill="#00ff00"/></svg>',
+        'offline': '<svg width="16px" height="15px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2z" fill="#ff0000"/></svg>',
+        response: '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 488 488" style="enable-background:new 0 0 488 488;" xml:space="preserve" width="16px" height="15px"><g transform="translate(0 -540.36)"><g><g><path d="M351.1,846.96l-97.1-67.9v-116.7c0-5.5-4.5-10-10-10s-10,4.5-10,10v122c0,3.3,1.6,6.3,4.3,8.2l101.4,70.9     c1.7,1.2,3.7,1.8,5.7,1.8v0c3.1,0,6.2-1.5,8.2-4.4C356.7,856.36,355.6,850.16,351.1,846.96z"/><path d="M416.4,611.96L416.4,611.96c-46.2-46.2-107.4-71.6-172.4-71.6s-126.2,25.4-172.4,71.6C25.4,658.16,0,719.36,0,784.36     s25.4,126.2,71.6,172.4c46.2,46.2,107.4,71.6,172.4,71.6s126.2-25.4,172.4-71.6s71.6-107.4,71.6-172.4S462.6,658.16,416.4,611.96     z M254,1008.16L254,1008.16v-40.8c0-5.5-4.5-10-10-10s-10,4.5-10,10v40.8c-115.6-5.1-208.7-98.2-213.8-213.8H61     c5.5,0,10-4.5,10-10s-4.5-10-10-10H20.2c5.1-115.6,98.2-208.7,213.8-213.8v40.8c0,5.5,4.5,10,10,10s10-4.5,10-10v-40.8     c115.6,5.1,208.7,98.2,213.8,213.8H427c-5.5,0-10,4.5-10,10s4.5,10,10,10h40.8C462.7,909.96,369.6,1003.06,254,1008.16z"/></g></g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g><g></g></svg>',
+        link: '<svg width="16px" height="15px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 5a1 1 0 1 1 0-2h6a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0V6.414l-9.293 9.293a1 1 0 0 1-1.414-1.414L17.586 5H14zM3 7a2 2 0 0 1 2-2h5a1 1 0 1 1 0 2H5v12h12v-5a1 1 0 1 1 2 0v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="#0D0D0D"/></svg>'
+      }, node;
+      node = document.createElement( 'span' );node.classList.add( 'fwp-svg-icon' );node.innerHTML = icons.review;
+      if( thisClass.is( icons[ tr ] ) ) {
+        node.innerHTML = icons[ tr ];
+      }
+      return node;
     }
     sort( args ) {
       var form = {range: {}, delivery: 3, label: [], lives: [], speak: []};
@@ -511,7 +606,7 @@
             e = vase[ i ];
             e.language.forEach( function( l ) {
               lg = l[ 0 ];
-              if( lg.replace( / /g, '' ).toLowerCase() == sk.replace( / /g, '' ).toLowerCase() || sk.contains( lg ) ) {
+              if( lg.replace( / /g, '' ).toLowerCase() == sk[ 0 ].replace( / /g, '' ).toLowerCase() || sk[ 0 ].contains( lg ) ) {
                 output[ i ] = e;
               }
             } );
@@ -522,8 +617,8 @@
       
       
       
-      // console.log( 'Filter', {filters: args, list: thisClass.base} );
-      // console.log( 'Filtered', vase );
+      console.log( 'Filter', {filters: args, list: thisClass.base} );
+      console.log( 'Filtered', vase );
 
       thisClass.getLists( vase );
     }
@@ -537,106 +632,69 @@
           
           tr = document.createElement( 'tr' );
           tr.setAttribute( 'data-fwpid', args.meta.requestId );
-  
-          // Table Data Date <td>
-          td = document.createElement( 'td' );
-          td.classList.add( 'date' );
-          span = document.createElement( 'span' );span.innerHTML = args.meta.requestDate;td.appendChild( span );
-          node = document.createElement( 'strong' );node.classList.add( 'extension-requestpage-country' );node.innerText = args.info.location;td.appendChild( node );
-          tr.appendChild( td );
-          
-          // Table Data BUYER <td>
-          td = document.createElement( 'td' );
-          td.classList.add( 'profile-40', 'height95' );
-          span = document.createElement( 'span' );span.classList.add( 'user-pict-40' );span.innerHTML = args.meta.userPict;td.appendChild( span );
-          node = document.createElement( 'a' );node.classList.add( 'extension-requestpage-username' );node.href = 'https://www.fiverr.com/' + args.meta.username;node.target = '_blank';node.innerText = args.meta.username;td.appendChild( node );
-          tr.appendChild( td );
-  
-          // Table Data REQUEST <td>
-          td = document.createElement( 'td' );
-          td.classList.add( 'text-wide' );
-          span = document.createElement( 'span' );span.innerText = ( args.meta.requestText.length >= 125 ) ? args.meta.requestText.substr( 0, 125 ) + '...' : args.meta.requestText;
-          if( args.meta.requestText.length >= 125 ) {a = document.createElement( 'a' );a.href= '#';a.classList.add( 'is-online', 'btn-see-more', 'js-see-more', 'm-r-10', 'pos-abs' );a.setAttribute( 'data-more', args.meta.requestText );a.innerText = 'See more';a.onclick = function( e ) {e.preventDefault();this.parentNode.innerHTML = this.dataset.more;};itag = document.createElement( 'i' );a.appendChild( itag );span.appendChild( a );}td.appendChild( span );
-          if( args.meta.requestTags && args.meta.requestTags.length >= 1 ) {
-            div = document.createElement( 'div' );div.classList.add( 'tags-standard', 'tags-white-bg' );
-            args.meta.requestTags.forEach( function( tg, i ) {
-              span = document.createElement( 'span' );span.innerText = tg;div.appendChild( span );
-            } );
+          if( thisClass.is( args.meta.trHtml ) ) {
+            tr.innerHTML = args.meta.trHtml;
+          } else {
+            // Table Data Date <td>
+            td = document.createElement( 'td' );
+            td.classList.add( 'date' );
+            span = document.createElement( 'span' );span.innerHTML = args.meta.requestDate;td.appendChild( span );
+            node = document.createElement( 'strong' );node.classList.add( 'extension-requestpage-country' );node.innerText = args.info.location;td.appendChild( node );
+            tr.appendChild( td );
+            
+            // Table Data BUYER <td>
+            td = document.createElement( 'td' );
+            td.classList.add( 'profile-40', 'height95' );
+            span = document.createElement( 'span' );span.classList.add( 'user-pict-40' );span.innerHTML = args.meta.userPict;td.appendChild( span );
+            node = document.createElement( 'a' );node.classList.add( 'extension-requestpage-username' );node.href = 'https://www.fiverr.com/' + args.meta.username;node.target = '_blank';node.innerText = args.meta.username;td.appendChild( node );
+            tr.appendChild( td );
+    
+            // Table Data REQUEST <td>
+            td = document.createElement( 'td' );
+            td.classList.add( 'text-wide' );
+            span = document.createElement( 'span' );span.innerText = ( args.meta.requestText.length >= 125 ) ? args.meta.requestText.substr( 0, 125 ) + '...' : args.meta.requestText;
+            if( args.meta.requestText.length >= 125 ) {a = document.createElement( 'a' );a.href= '#';a.classList.add( 'is-online', 'btn-see-more', 'js-see-more', 'm-r-10', 'pos-abs' );a.setAttribute( 'data-more', args.meta.requestText );a.innerText = 'See more';a.onclick = function( e ) {e.preventDefault();this.parentNode.innerHTML = this.dataset.more;};itag = document.createElement( 'i' );a.appendChild( itag );span.appendChild( a );}td.appendChild( span );
+            if( args.meta.requestTags && args.meta.requestTags.length >= 1 ) {
+              div = document.createElement( 'div' );div.classList.add( 'tags-standard', 'tags-white-bg' );
+              args.meta.requestTags.forEach( function( tg, i ) {
+                span = document.createElement( 'span' );span.innerText = tg;div.appendChild( span );
+              } );
+              td.appendChild( div );
+            }
+            tr.appendChild( td );
+    
+            // Table Data OFFERS <td>
+            td = document.createElement( 'td' );
+            td.classList.add( 'applications', 't-a-center' );
+            span = document.createElement( 'span' );span.innerText = args.meta.offers;td.appendChild( span );
+            tr.appendChild( td );
+    
+            // Table Data DURATION <td>
+            td = document.createElement( 'td' );
+            td.classList.add( 'hidden-action', 't-a-center', 'with-text' );
+            div = document.createElement( 'div' );div.classList.add( 'hover-show' );
+            span = document.createElement( 'span' );span.classList.add( 'duration' );span.innerText = args.meta.delivery;div.appendChild( span );
+            a = document.createElement( 'a' );a.href = '#';a.setAttribute( 'data-meta', JSON.stringify( {requestId: args.meta.requestId, isProfessional: args.meta.isProfessional} ) );a.classList.add( 'remove-request', 'js-remove-request' );a.innerText = 'Remove Request';div.appendChild( a );
             td.appendChild( div );
+            div = document.createElement( 'div' );div.classList.add( 'hover-hide' );
+            span = document.createElement( 'span' );span.innerText = args.meta.delivery;div.appendChild( span );
+            td.appendChild( div );tr.appendChild( td );
+    
+            // Table Data BUDGET <td>
+            td = document.createElement( 'td' );
+            td.classList.add( 'hidden-action', 't-a-center', 'with-text' );
+            div = document.createElement( 'div' );div.classList.add( 'hover-show' );
+            span = document.createElement( 'span' );span.classList.add( 'budget' );span.innerText = args.meta.budget;div.appendChild( span );
+            if( ! args.meta.requestStatus ) {a = document.createElement( 'a' );a.href = '#';a.setAttribute( 'data-meta', JSON.stringify( args.meta ) );a.classList.add( 'btn-standard', 'btn-green-grad', 'js-send-offer' );a.innerText = 'Send Offer';div.appendChild( a );} else {
+              span = document.createElement( 'span' );span.innerText = 'Offer Sent';itag = document.createElement( 'i' );itag.classList.add( 'fa', 'fa-reply' );span.appendChild( itag );div.appendChild( span );
+            }
+    
+            td.appendChild( div );
+            div = document.createElement( 'div' );div.classList.add( 'hover-hide' );
+            span = document.createElement( 'span' );span.innerText = args.meta.budget;div.appendChild( span );
+            td.appendChild( div );tr.appendChild( td );
           }
-          tr.appendChild( td );
-  
-          // Table Data OFFERS <td>
-          td = document.createElement( 'td' );
-          td.classList.add( 'applications', 't-a-center' );
-          span = document.createElement( 'span' );span.innerText = args.meta.offers;td.appendChild( span );
-          tr.appendChild( td );
-  
-          // Table Data DURATION <td>
-          td = document.createElement( 'td' );
-          td.classList.add( 'hidden-action', 't-a-center', 'with-text' );
-          div = document.createElement( 'div' );div.classList.add( 'hover-show' );
-          span = document.createElement( 'span' );span.classList.add( 'duration' );span.innerText = args.meta.delivery;div.appendChild( span );
-          a = document.createElement( 'a' );a.href = '#';a.setAttribute( 'data-meta', JSON.stringify( {requestId: args.meta.requestId, isProfessional: args.meta.isProfessional} ) );a.classList.add( 'remove-request', 'js-remove-request' );a.innerText = 'Remove Request';div.appendChild( a );
-          td.appendChild( div );
-          div = document.createElement( 'div' );div.classList.add( 'hover-hide' );
-          span = document.createElement( 'span' );span.innerText = args.meta.delivery;div.appendChild( span );
-          td.appendChild( div );tr.appendChild( td );
-  
-          // Table Data BUDGET <td>
-          td = document.createElement( 'td' );
-          td.classList.add( 'hidden-action', 't-a-center', 'with-text' );
-          div = document.createElement( 'div' );div.classList.add( 'hover-show' );
-          span = document.createElement( 'span' );span.classList.add( 'budget' );span.innerText = args.meta.budget;div.appendChild( span );
-          if( ! args.meta.requestStatus ) {a = document.createElement( 'a' );a.href = '#';a.setAttribute( 'data-meta', JSON.stringify( args.meta ) );a.classList.add( 'btn-standard', 'btn-green-grad', 'js-send-offer' );a.innerText = 'Send Offer';div.appendChild( a );} else {
-            span = document.createElement( 'span' );span.innerText = 'Offer Sent';itag = document.createElement( 'i' );itag.classList.add( 'fa', 'fa-reply' );span.appendChild( itag );div.appendChild( span );
-          }
-  
-          td.appendChild( div );
-          div = document.createElement( 'div' );div.classList.add( 'hover-hide' );
-          span = document.createElement( 'span' );span.innerText = args.meta.budget;div.appendChild( span );
-          td.appendChild( div );tr.appendChild( td );
-  
           tbody.appendChild( tr );
-  
-          if( 1 == 2 ) {
-            html += '\
-            <tr>\
-              <td class="date">\
-                <span>' + args.meta.requestDate + '</span>\
-              </td>\
-              <td class="profile-40  height95">\
-                <span class="user-pict-40">\
-                  ' + args.meta.userPict + '\
-                </span>\
-                <span></span>\
-              </td>\
-              <td class="text-wide">\
-                <span>' + args.meta.requestText + '</span>\
-              </td>\
-              <td class="applications  t-a-center">\
-                <span>' + args.meta.offers + '</span>\
-              </td>\
-              <td class="hidden-action t-a-center with-text">\
-                <div class="hover-show">\
-                  <span class="duration">' + args.meta.delivery + '</span>\
-                  <a href="#" class="remove-request js-remove-request" data-meta="{&quot;requestId&quot;:&quot;' + args.meta.requestId + '&quot;,&quot;isProfessional&quot;:' + args.meta.isProfessional + '}">Remove Request</a>\
-                </div>\
-                <div class="hover-hide">\
-                  <span>' + args.meta.delivery + '</span>\
-                </div>\
-              </td>\
-              <td class="hidden-action t-a-center with-text">\
-                <div class="hover-show">\
-                  <span class="budget">' + args.meta.budget + '</span>\
-                  <a href="#" class="btn-standard btn-green-grad js-send-offer" data-meta="' + JSON.stringify( args.meta ) + '">Send Offer </a>\
-                </div>\
-                <div class="hover-hide">\
-                  <span>' + args.meta.budget + '</span>\
-                </div>\
-              </td>\
-            </tr>';
-          }
         } );
       } else {
         tr = document.createElement( 'tr' );

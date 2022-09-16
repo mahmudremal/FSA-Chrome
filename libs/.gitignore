@@ -1,0 +1,12 @@
+node_modules
+assets/src
+assets/build/Fiverr-Seller-Assistant crome extension
+.eslintignore
+.eslintrc.json
+.babelrc
+.nvmrc
+.stylelintrc.json
+hash.js
+package.json
+package-lock.json
+webpack.config.js
