@@ -1,2 +1,4 @@
 /Dist
 /assets/src
+.gitignore
+/libs
