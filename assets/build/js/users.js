@@ -93,6 +93,10 @@
 /*! no static exports found */
 /***/ (function(module, exports) {
 
+function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { Promise.resolve(value).then(_next, _throw); } }
+
+function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
+
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
@@ -122,9 +126,11 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         currency: this.is(document.querySelector('.locale-settings-package .currency-selection-trigger')) ? this.currency(document.querySelector('.locale-settings-package .currency-selection-trigger').innerText) : '$'
       };
       this.base = {};
+      this.request = [];
       this.database = this.getDatabase();
       this.isCDN = false;
       this.isDef = false;
+      this.me = 'mahmud_remal';
       this.init();
     }
 
@@ -134,7 +140,9 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         // this.dev();
         this.trigger();
         this.filters();
-        this.keyboard();
+        this.keyboard(); // this.loadMore();
+
+        this.loadAll();
       }
     }, {
       key: "dev",
@@ -176,11 +184,13 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         document.addEventListener("keypress", function (e) {
           // e.preventDefault();
           // var key = String.fromCharCode( e.which ); // a, b,c, d, e.
+          // http://blogs.longwin.com.tw/lifetype/key_codes.html
           // Ctrl + Alt + Shift + U shortcut for delete all from Junk
-          if (e.ctrlKey && e.altKey && e.shiftKey && e.which == 85) {// thisClass.clean( true ); // parametar is if it is all delete? efault: False
+          if (e.ctrlKey && e.altKey && e.shiftKey && e.which == 85) {
+            thisClass.clean(true); // parametar is if it is all delete? efault: False
             // Ctrl + Alt + U shortcut for delete all which are replied.
           } else if (e.ctrlKey && e.altKey && e.which == 85) {
-            thisClass.updateFilters('all'); // thisClass.clean( false );
+            thisClass.clean(false);
           } else {}
         });
       }
@@ -210,7 +220,15 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       key: "load",
       value: function load() {
         var thisClass = this;
+        var e;
         document.querySelectorAll('.js-db-table table tbody tr').forEach(function (e, i) {
+          if (!thisClass.is(e.dataset.fwpid)) {
+            thisClass.request[e.dataset.id] = e;
+          }
+        });
+        Object.keys(thisClass.request).forEach(function (i) {
+          e = thisClass.request[i];
+
           if (!thisClass.is(e.dataset.fwpid)) {
             if (e.querySelectorAll('a.js-send-offer').length >= 1) {
               var meta = e.querySelector('a.js-send-offer').dataset.meta;
@@ -300,6 +318,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
               e.removeAttribute('data-fwpid');
               e.setAttribute('data-tried', Number(e.getAttribute('data-tried')) + 1);
             }
+
+            thisClass.request[e.dataset.fwpid] = e;
           }
         });
       }
@@ -340,6 +360,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
               e.removeAttribute('data-fwpid');
               e.setAttribute('data-tried', Number(e.getAttribute('data-tried')) + 1);
             }
+
+            thisClass.request[e.dataset.fwpid] = e;
           }
         });
       }
@@ -451,6 +473,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         //   // e.querySelector( 'td.see-more' ).appendChild( node );
         // }
 
+
+        thisClass.request[e.dataset.fwpid] = e;
       }
     }, {
       key: "fetchScrap",
@@ -489,8 +513,8 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
             scl: thisClass.is(r.sellerCommunicationLevel) ? r.sellerCommunicationLevel : false,
             rtf: thisClass.is(r.recommendToaFriend) ? r.recommendToaFriend : false,
             sad: thisClass.is(r.sellerDeliveryLevel) ? r.sellerDeliveryLevel : false,
-            rab: r.sellingReviews.valuationsAverage,
-            rabt: r.sellingReviews.totalCount,
+            rab: thisClass.is(r.sellingReviews) ? r.sellingReviews.valuationsAverage : false,
+            rabt: thisClass.is(r.sellingReviews) ? r.sellingReviews.totalCount : false,
             ras: r.starsRating,
             rast: r.ratingsCount
           },
@@ -588,6 +612,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
          * Special filters for extensions.
          */
         var thisClass = this;
+        var td, tr, div, span, a, i;
 
         if (document.querySelectorAll('.js-fwp-filters').length >= 1) {
           return;
@@ -616,11 +641,21 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           </div>\
         </div>\
       </td>';
-        var td = document.createElement('td');
-        td.setAttribute('colspan', 4);
+        div = ['.db-new-main-table table thead tr.header-filter', '.db-new-main-table table thead tr.header-filter td'];
+        td = document.createElement('td');
+        td.setAttribute('colspan', 1);
+        a = document.createElement('a');
+        a.href = '#';
+        a.classList.add('js-fwp-load-all-btn');
+        a.innerHTML = 'Load All';
+        a.appendChild(document.createElement('i'));
+        td.appendChild(a);
+        document.querySelector(div[0]).insertBefore(td, document.querySelectorAll(div[1])[1]);
+        td = document.createElement('td');
+        td.setAttribute('colspan', 3);
         td.classList.add('js-fwp-filters', 'listings-perseus');
         td.innerHTML = html;
-        document.querySelector('.db-new-main-table table thead tr.header-filter').insertBefore(td, document.querySelectorAll('.db-new-main-table table thead tr.header-filter td')[1]);
+        document.querySelector(div[0]).insertBefore(td, document.querySelectorAll(div[1])[1]);
         thisClass.event();
       }
     }, {
@@ -998,6 +1033,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
     }, {
       key: "functions",
       value: function functions() {
+        var thisClass = this;
         var arr = [];
         document.querySelectorAll('.listings-perseus .floating-menu .menu-content .checkbox-list.speak .label').forEach(function (e, i) {
           arr.push(e.innerText);
@@ -1010,6 +1046,50 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
           country.push([i, e]);
         });
         console.log(country);
+
+        var fetchMoviesJSON = /*#__PURE__*/function () {
+          var _ref = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee() {
+            var response;
+            return regeneratorRuntime.wrap(function _callee$(_context) {
+              while (1) {
+                switch (_context.prev = _context.next) {
+                  case 0:
+                    _context.next = 2;
+                    return fetch('https://www.fiverr.com/users/' + thisClass.me + '/requests?current_filter=active&page=1&per_page=15', {
+                      "credentials": "include",
+                      "headers": {
+                        "Accept": "text/javascript",
+                        "Accept-Language": "en-US,en;q=0.5"
+                      },
+                      "referrer": 'https://www.fiverr.com/users/' + thisClass.me + '/requests',
+                      "method": "GET",
+                      "mode": "cors"
+                    });
+
+                  case 2:
+                    response = _context.sent;
+                    _context.next = 5;
+                    return response.json();
+
+                  case 5:
+                    return _context.abrupt("return", _context.sent);
+
+                  case 6:
+                  case "end":
+                    return _context.stop();
+                }
+              }
+            }, _callee);
+          }));
+
+          return function fetchMoviesJSON() {
+            return _ref.apply(this, arguments);
+          };
+        }();
+
+        fetchMoviesJSON().then(function (json) {
+          console.log(json);
+        }); // 
       }
     }, {
       key: "getDatabase",
@@ -1763,7 +1843,7 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
       }
     }, {
       key: "notice",
-      value: function notice() {}
+      value: function notice(e) {}
     }, {
       key: "flags",
       value: function flags() {
@@ -2108,6 +2188,261 @@ function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _d
         } else {
           thisClass.base = {};
         }
+      }
+    }, {
+      key: "fetchJSON",
+      value: function fetchJSON(args, e) {
+        var thisClass = this;
+        e.classList.add('fwp-loading');
+        fetch('https://www.fiverr.com/users/' + thisClass.me + '/requests?current_filter=' + args.filter + '&page=' + args.page + '&per_page=' + args.per_page, {
+          "credentials": "include",
+          "headers": {
+            "Accept": "text/javascript",
+            "Accept-Language": "en-US,en;q=0.5"
+          },
+          "referrer": 'https://www.fiverr.com/users/' + thisClass.me + '/requests',
+          "method": "GET",
+          "mode": "cors"
+        }).then(function (response) {
+          return response.json();
+        }).then(function (data) {
+          if (data.results && data.results.rows && data.results.rows.length >= 1 && data.results.rows[0].cells && data.results.rows[0].cells[0].type && data.results.rows[0].cells[0].type == 'empty') {} else {
+            thisClass.fetchExe(data);
+            args.page = args.page + 1;
+            e.setAttribute('data-meta', JSON.stringify(args));
+          }
+
+          e.classList.remove('fwp-loading');
+        }).catch(function (err) {
+          thisClass.notice(err);
+          e.classList.remove('fwp-loading');
+        });
+      }
+    }, {
+      key: "fetchExe",
+      value: function fetchExe(args) {
+        var thisClass = this;
+        var tbody = document.querySelector('.js-db-table.fwp-js-activate table tbody'),
+            html = '',
+            tr,
+            td,
+            span,
+            div,
+            a,
+            itag,
+            node,
+            row;
+
+        if (args.results && args.results.rows && args.results.rows.length >= 1) {
+          if (args.results.rows[0].cells && args.results.rows[0].cells[0].type && args.results.rows[0].cells[0].type == 'empty') {
+            return;
+          } else {
+            args.results.rows.forEach(function (e, i) {
+              var _a$classList, _span$classList, _a$classList2;
+
+              row = e; // Create TR Table Row
+
+              tr = document.createElement('tr');
+              tr.setAttribute('data-id', row.identifier); // Table Data Date <td>
+
+              td = document.createElement('td');
+              td.classList.add(row.cells[0].type);
+              span = document.createElement('span');
+              span.innerHTML = row.cells[0].text;
+              td.appendChild(span);
+              tr.appendChild(td); // Table Data BUYER <td>
+
+              td = document.createElement('td');
+              td.classList.add(row.cells[1].type, row.cells[1].cssClass);
+              span = document.createElement('span');
+              span.classList.add('user-pict-40');
+              span.innerHTML = row.cells[1].userPict;
+              td.appendChild(span);
+              tr.appendChild(td); // Table Data REQUEST <td>
+
+              td = document.createElement('td');
+              td.classList.add(row.cells[2].type);
+              div = document.createElement('div');
+              div.classList.add('ellipsis', 'text-wrap');
+              span = document.createElement('span');
+              span.innerText = row.cells[2].text >= 125 ? row.cells[2].text.substr(0, 125) + '...' : row.cells[2].text;
+
+              if (row.cells[2].text >= 125) {
+                a = document.createElement('a');
+                a.href = '#';
+                a.classList.add('is-online', 'btn-see-more', 'js-see-more', 'm-r-10', 'pos-abs');
+                a.setAttribute('data-more', row.cells[2].text);
+                a.innerText = 'See more';
+
+                a.onclick = function (e) {
+                  e.preventDefault();
+                  this.parentNode.innerHTML = this.dataset.more;
+                };
+
+                itag = document.createElement('i');
+                a.appendChild(itag);
+                span.appendChild(a);
+              }
+
+              div.appendChild(span);
+              td.appendChild(div);
+
+              if (row.cells[2].tags && row.cells[2].tags.length >= 1) {
+                div = document.createElement('div');
+                div.classList.add('tags-standard', 'tags-white-bg');
+                row.cells[2].tags.forEach(function (tg, t) {
+                  span = document.createElement('span');
+                  span.innerText = tg;
+                  div.appendChild(span);
+                });
+                td.appendChild(div);
+              }
+
+              tr.appendChild(td); // Table Data OFFERS <td>
+
+              td = document.createElement('td');
+              td.classList.add(row.cells[3].type, 't-a-center');
+              span = document.createElement('span');
+              span.innerText = row.cells[3].text;
+              td.appendChild(span);
+              tr.appendChild(td); // Table Data DURATION <td>
+
+              td = document.createElement('td');
+              td.classList.add(row.cells[4].type, 't-a-center', 'with-text');
+              div = document.createElement('div');
+              div.classList.add('hover-show');
+              span = document.createElement(row.cells[4].buttons[0].type);
+              span.classList.add(row.cells[4].buttons[0].class);
+              span.innerText = row.cells[4].buttons[0].text;
+              div.appendChild(span);
+              a = document.createElement('a');
+              a.href = '#';
+              a.setAttribute('data-meta', JSON.stringify(row.cells[4].buttons[1].meta));
+
+              (_a$classList = a.classList).add.apply(_a$classList, _toConsumableArray(row.cells[4].buttons[1].class.split(' ')));
+
+              a.innerText = row.cells[4].buttons[1].text;
+              div.appendChild(a);
+              td.appendChild(div);
+              div = document.createElement('div');
+              div.classList.add('hover-hide');
+              span = document.createElement('span');
+              span.innerText = row.cells[4].text;
+              div.appendChild(span);
+              td.appendChild(div);
+              tr.appendChild(td); // Table Data BUDGET <td>
+
+              td = document.createElement('td');
+              td.classList.add(row.cells[5].type, row.cells[5].withText ? 't-a-center' : 'no-t-a-center', row.cells[5].withText ? 'with-text' : 'no-width-text');
+              div = document.createElement('div');
+              div.classList.add('hover-show');
+              span = document.createElement(row.cells[5].buttons[0].type);
+
+              (_span$classList = span.classList).add.apply(_span$classList, _toConsumableArray(row.cells[5].buttons[0].class.split(' ')));
+
+              span.innerText = row.cells[5].buttons[0].text;
+              div.appendChild(span);
+              a = document.createElement('a');
+              a.href = '#';
+              a.setAttribute('data-meta', JSON.stringify(row.cells[5].buttons[1].meta));
+
+              (_a$classList2 = a.classList).add.apply(_a$classList2, _toConsumableArray(row.cells[5].buttons[1].class.split(' ')));
+
+              a.innerText = row.cells[5].buttons[1].text;
+              div.appendChild(a);
+              td.appendChild(div);
+              div = document.createElement('div');
+              div.classList.add('hover-hide');
+              span = document.createElement('span');
+              span.innerText = row.cells[5].text;
+              div.appendChild(span);
+              td.appendChild(div);
+              tr.appendChild(td);
+              tbody.appendChild(tr);
+            });
+          }
+        }
+      }
+    }, {
+      key: "loadMore",
+      value: function loadMore() {
+        var args = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+        var thisClass = this;
+        var col,
+            tr,
+            a,
+            tfoot,
+            hasTfoot = false;
+        args = {
+          page: 1,
+          per_page: 15,
+          filter: 'active'
+        };
+
+        if (document.querySelectorAll('.js-db-table.fwp-js-activate table tfoot').length >= 1) {
+          tfoot = document.querySelector('.js-db-table.fwp-js-activate table tfoot');
+          hasTfoot = true;
+        } else {
+          tfoot = document.createElement('tfoot');
+          tfoot.classList.add('fwp-tfoot');
+        }
+
+        col = document.querySelectorAll('.js-db-table table thead tr.js-header-titles td').length;
+        tr = document.createElement('tr');
+        td = document.createElement('td');
+        td.classList.add('fwp-tr-load-more');
+        td.setAttribute('colspan', col && col > 1 ? col : 6);
+        a = document.createElement('a');
+        a.classList.add('fwp-load-more');
+        a.href = '/users/' + thisClass.me + '/requests/offers?current_filter=' + args.filter + '&amp;page=' + args.page + '&amp;per_page=' + args.per_page;
+        a.innerText = 'Load More';
+        a.setAttribute('data-meta', JSON.stringify(args));
+        a.appendChild(document.createElement('i'));
+        td.appendChild(a);
+        tr.appendChild(td);
+        tfoot.innerHTML = '';
+        tfoot.appendChild(tr);
+
+        if (!hasTfoot) {
+          document.querySelector('.js-db-table.fwp-js-activate table').appendChild(tfoot);
+        }
+
+        document.querySelector('.js-db-table.fwp-js-activate table tfoot .fwp-load-more').addEventListener('click', function (e) {
+          e.preventDefault();
+          var args = JSON.parse(this.dataset.meta);
+          thisClass.fetchJSON(args, this);
+        });
+      }
+    }, {
+      key: "loadAll",
+      value: function loadAll() {
+        var thisClass = this;
+        document.querySelector('.db-new-main-table table thead td .js-fwp-load-all-btn').addEventListener('click', function (e) {
+          var _this3 = this;
+
+          e.preventDefault();
+          var tab = '.db-new-filters .tabs.js-db-status-tabs li a[data-type="all"]',
+              index = 0;
+
+          if (document.querySelectorAll(tab).length >= 1) {
+            var tb = document.querySelector(tab),
+                dc = thisClass.is(tb.dataset.countExtended) ? tb.dataset.countExtended : false,
+                dce = thisClass.is(tb.dataset.count) ? tb.dataset.count : false,
+                args = thisClass.is(this.dataset.meta) ? JSON.parse(this.dataset.meta) : {
+              page: 1,
+              per_page: dce >= 1 ? dce : 200,
+              filter: 'active'
+            };
+            setInterval(function () {
+              index++;
+              args.page = index;
+
+              if (index <= 20) {
+                thisClass.fetchJSON(args, _this3);
+              }
+            }, 5000);
+          }
+        });
       }
     }]);
 

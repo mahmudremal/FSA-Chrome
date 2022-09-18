@@ -27,6 +27,25 @@
   height: 80vh;
   width: 80vw; }
 
+.db-new-main-table table thead td .js-fwp-load-all-btn {
+  background: #3f3f3f;
+  border: none;
+  display: block;
+  padding: 10px 15px;
+  font-size: 14px;
+  color: #f3f3f3;
+  -webkit-transition: all .3s;
+  transition: all .3s;
+  text-align: center;
+  text-decoration: none;
+  position: relative; }
+
+.db-new-main-table table thead td .js-fwp-load-all-btn:hover {
+  color: #3f3f3f;
+  background: #f3f3f3;
+  border: 1.5px solid #3f3f3f; }
+
+js-fwp-load-all-btn
 .js-fwp-filters.listings-perseus {
   visibility: hidden;
   opacity: 0;
@@ -284,6 +303,74 @@
   line-height: 40px;
   font-size: 18px;
   color: #95979d; }
+
+.db-new-main-table.fwp-js-activate table td.fwp-tr-load-more {
+  padding: unset; }
+
+.db-new-main-table.fwp-js-activate table td.fwp-tr-load-more .fwp-load-more {
+  background: #fff;
+  border: 1px #e5e5e5 solid;
+  border-top: 0;
+  display: block;
+  padding: 15px 0;
+  font-size: 14px;
+  color: #4a73e8;
+  -webkit-transition: background-color .1s;
+  transition: background-color .1s;
+  text-transform: uppercase;
+  text-align: center;
+  position: relative; }
+
+.db-new-main-table.fwp-js-activate table td.fwp-tr-load-more .fwp-load-more:hover {
+  text-decoration: none;
+  background-color: #f5fbfc; }
+
+.db-new-main-table table thead td .js-fwp-load-all-btn i, .db-new-main-table.fwp-js-activate table td.fwp-tr-load-more .fwp-load-more i {
+  position: relative;
+  margin-left: 10px;
+  opacity: 0;
+  visibility: hidden; }
+
+.db-new-main-table table thead td .js-fwp-load-all-btn.fwp-loading i, .db-new-main-table.fwp-js-activate table td.fwp-tr-load-more .fwp-load-more.fwp-loading i {
+  opacity: 1;
+  visibility: visible; }
+
+.db-new-main-table table thead td .js-fwp-load-all-btn.fwp-loading i, .db-new-main-table.fwp-js-activate table td.fwp-tr-load-more .fwp-load-more.fwp-loading i:before {
+  content: " ";
+  display: block;
+  background: 0;
+  animation: ldld-default .5s ease-in-out infinite;
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-color: currentColor transparent currentColor transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  width: 20px;
+  height: 20px;
+  transform: translateX(60px);
+  animation: spin 2s ease;
+  animation-name: spin;
+  animation-duration: 1s;
+  animation-iteration-count: infinite; }
+
+.db-new-main-table table thead td .js-fwp-load-all-btn.fwp-loading {
+  text-align: left;
+  cursor: progress; }
+
+.db-new-main-table table thead td .js-fwp-load-all-btn.fwp-loading i {
+  right: 10px;
+  left: unset; }
+
+.db-new-main-table.fwp-js-activate + .db-load-more {
+  display: none; }
 
 .ELuD7Xl {
   -webkit-box-sizing: border-box;
